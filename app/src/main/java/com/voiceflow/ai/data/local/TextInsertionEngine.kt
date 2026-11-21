@@ -179,6 +179,23 @@ class TextInsertionEngine @Inject constructor(
         }
     }
 
+    /**
+     * The real user text of a field. An empty field's node.text is its
+     * hint/placeholder (e.g. "Message" in WhatsApp), not user content.
+     * isShowingHintText alone is not reliable — WhatsApp does not always set
+     * it — so text that exactly matches the node's hint is also treated as
+     * empty, unless the cursor sits inside it (the user actually typed it).
+     */
+    fun extractRealText(node: AccessibilityNodeInfo): String {
+        if (node.isShowingHintText) return ""
+        val text = node.text?.toString() ?: return ""
+        val hint = try { node.hintText?.toString() } catch (_: Exception) { null }
+        if (!hint.isNullOrEmpty() && text == hint &&
+            node.textSelectionStart <= 0 && node.textSelectionEnd <= 0
+        ) return ""
+        return text
+    }
+
     override fun getCurrentFieldInfo(): FieldInfo? {
         val node = focusedNode ?: return currentCachedFieldInfo
         return try {
@@ -189,7 +206,7 @@ class TextInsertionEngine @Inject constructor(
                 isEditable = node.isEditable,
                 isSensitive = false,
                 isPassword = node.isPassword,
-                currentText = if (node.isShowingHintText) "" else node.text?.toString() ?: "",
+                currentText = extractRealText(node),
                 selectionStart = node.textSelectionStart,
                 selectionEnd = node.textSelectionEnd
             )
@@ -219,7 +236,13 @@ class TextInsertionEngine @Inject constructor(
             // When the field is empty, node.text returns the hint/placeholder
             // (e.g. "Message" in WhatsApp), not real content — treat it as empty
             // so the hint is never prepended to the transcription.
-            val liveText = if (node.isShowingHintText) "" else node.text?.toString() ?: fieldInfo.currentText
+            val liveText = extractRealText(node).ifEmpty {
+                // Node reported no real text; fall back to the cached text,
+                // unless the cached text is itself just the hint.
+                val cached = fieldInfo.currentText
+                val hint = try { node.hintText?.toString() } catch (_: Exception) { null }
+                if (!hint.isNullOrEmpty() && cached == hint) "" else cached
+            }
             val liveFieldInfo = fieldInfo.copy(currentText = liveText)
             val finalText = buildInsertionText(text, liveFieldInfo)
             val args = Bundle().apply {

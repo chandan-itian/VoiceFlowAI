@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.voiceflow.ai.R
 import com.voiceflow.ai.presentation.ui.components.SettingsClickableItem
@@ -242,6 +243,17 @@ fun HomeScreen(
             )
 
             Spacer(modifier = Modifier.height(32.dp))
+
+            // Footer
+            Text(
+                text = "Made with ❤️ by Chandan Singh",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp)
+            )
         }
     }
 }
