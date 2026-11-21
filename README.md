@@ -27,7 +27,7 @@
 It runs completely offline using an optimized native **Whisper.cpp (ARM64-v8a)** engine tuned specifically for Qualcomm Snapdragon processors, with an optional **Smart Hybrid AI** mode that can refine spoken grammar and punctuation using Gemini, Groq, or OpenAI.
 
 <p align="center">
-  <a href="release/VoiceFlowAI-v1.0.0-release.apk">
+  <a href="https://github.com/chandan-itian/VoiceFlowAI/releases/download/v1.0.0/VoiceFlowAI-v1.0.0-release.apk">
     <img src="https://img.shields.io/badge/Download-Release_APK_(11_MB)-brightgreen?style=for-the-badge&logo=android" alt="Download APK" />
   </a>
 </p>
@@ -108,11 +108,11 @@ To ensure complete transparency and production quality, here is an honest techni
 
 ### Step 1: Install APK
 Download and install the pre-built signed release APK:
-- Direct Download: [**VoiceFlowAI-v1.0.0-release.apk**](release/VoiceFlowAI-v1.0.0-release.apk) (11 MB)
+- Direct Download: [**VoiceFlowAI-v1.0.0-release.apk**](https://github.com/chandan-itian/VoiceFlowAI/releases/download/v1.0.0/VoiceFlowAI-v1.0.0-release.apk) (11 MB)
 
 Or via ADB:
 ```bash
-adb install -r release/VoiceFlowAI-v1.0.0-release.apk
+adb install -r https://github.com/chandan-itian/VoiceFlowAI/releases/download/v1.0.0/VoiceFlowAI-v1.0.0-release.apk
 ```
 
 ### Step 2: Grant Permissions
