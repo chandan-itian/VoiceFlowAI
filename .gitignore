@@ -1,0 +1,21 @@
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+app/.cxx
+.kotlin
+
+# Whisper model files (downloaded on device via Model Manager)
+*.bin
+*.bin.*
+
+# Key files & secrets
+*.jks
+*.keystore
+secrets.properties

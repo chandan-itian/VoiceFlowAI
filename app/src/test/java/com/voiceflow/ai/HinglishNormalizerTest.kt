@@ -1,0 +1,43 @@
+package com.voiceflow.ai
+
+import com.voiceflow.ai.utils.HinglishNormalizer
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class HinglishNormalizerTest {
+
+    @Test
+    fun testHinglishSpokenSentenceNormalization() {
+        val input = "bhai meri website ka dashboard update kar do aur booking system bhi check kar lena"
+        val output = HinglishNormalizer.normalize(
+            rawText = input,
+            isHinglishMode = true,
+            removeFillers = true,
+            fixPunctuation = true,
+            fixCapitalization = true
+        )
+
+        // Verifies first letter capital, technical terms preserved, sentence terminated with period
+        assertTrue(output.startsWith("Bhai"))
+        assertTrue(output.contains("dashboard"))
+        assertTrue(output.endsWith("."))
+    }
+
+    @Test
+    fun testDevanagariDetection() {
+        assertTrue(HinglishNormalizer.containsDevanagari("नमस्ते भारत"))
+        assertTrue(HinglishNormalizer.containsDevanagari("भाई डैशबोर्ड अपडेट कर दो"))
+        assertTrue(!HinglishNormalizer.containsDevanagari("Hello world"))
+    }
+
+    @Test
+    fun testTechnicalTermsPreserved() {
+        val input = "please send the apk with kotlin and android sdk"
+        val output = HinglishNormalizer.normalize(input)
+        assertTrue(output.contains("APK"))
+        assertTrue(output.contains("Kotlin"))
+        assertTrue(output.contains("Android"))
+        assertTrue(output.contains("SDK"))
+    }
+}

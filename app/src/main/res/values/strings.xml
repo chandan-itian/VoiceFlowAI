@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VoiceFlow AI</string>
+    <string name="accessibility_service_description">VoiceFlow AI detects when an editable text field is focused to display the floating microphone assistant and safely insert your voice transcription.</string>
+</resources>

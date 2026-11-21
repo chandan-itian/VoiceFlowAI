@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Bar 1 (Left tall) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 32,34 L 32,74 A 4,4 0 0,1 28,78 L 28,78 A 4,4 0 0,1 24,74 L 24,34 A 4,4 0 0,1 28,30 L 28,30 A 4,4 0 0,1 32,34 Z" />
+    <!-- Bar 2 (Mid-left short) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 45,53 L 45,67 A 4,4 0 0,1 41,71 L 41,71 A 4,4 0 0,1 37,67 L 37,53 A 4,4 0 0,1 41,49 L 41,49 A 4,4 0 0,1 45,53 Z" />
+    <!-- Bar 3 (Center medium) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 58,41 L 58,63 A 4,4 0 0,1 54,67 L 54,67 A 4,4 0 0,1 50,63 L 50,41 A 4,4 0 0,1 54,37 L 54,37 A 4,4 0 0,1 58,41 Z" />
+    <!-- Bar 4 (Mid-right short) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 71,53 L 71,67 A 4,4 0 0,1 67,71 L 67,71 A 4,4 0 0,1 63,67 L 63,53 A 4,4 0 0,1 67,49 L 67,49 A 4,4 0 0,1 71,53 Z" />
+    <!-- Bar 5 (Right tall) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 84,34 L 84,74 A 4,4 0 0,1 80,78 L 80,78 A 4,4 0 0,1 76,74 L 76,34 A 4,4 0 0,1 80,30 L 80,30 A 4,4 0 0,1 84,34 Z" />
+</vector>

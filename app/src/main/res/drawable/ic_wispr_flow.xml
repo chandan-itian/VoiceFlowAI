@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="400"
+    android:viewportHeight="400">
+    <!-- Bar 1 (Left tall) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 111,125.0 A 12.0,12.0 0 0 1 135,125.0 L 135,274.0 A 12.0,12.0 0 0 1 111,274.0 Z" />
+    <!-- Bar 2 (Mid-left short) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 149,205.0 A 12.0,12.0 0 0 1 173,205.0 L 173,256.0 A 12.0,12.0 0 0 1 149,256.0 Z" />
+    <!-- Bar 3 (Center medium) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 187,153.0 A 12.0,12.0 0 0 1 211,153.0 L 211,244.0 A 12.0,12.0 0 0 1 187,244.0 Z" />
+    <!-- Bar 4 (Mid-right short) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 225,205.0 A 12.0,12.0 0 0 1 249,205.0 L 249,256.0 A 12.0,12.0 0 0 1 225,256.0 Z" />
+    <!-- Bar 5 (Right tall) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 264,125.0 A 12.0,12.0 0 0 1 288,125.0 L 288,274.0 A 12.0,12.0 0 0 1 264,274.0 Z" />
+</vector>
