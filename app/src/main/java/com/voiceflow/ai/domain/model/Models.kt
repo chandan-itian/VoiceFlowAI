@@ -49,6 +49,14 @@ data class WhisperModel(
             sizeBytes = 57_000_000L,
             description = "Lightweight 5-bit model. 2.5x faster on Snapdragon. ~57 MB"
         )
+        val HINGLISH_Q5_1 = WhisperModel(
+            id = "hinglish_q5_1",
+            name = "Hinglish Quantized Q5_1 (Best for Hinglish)",
+            fileName = "ggml-hinglish-swift-q5_1.bin",
+            downloadUrl = "https://huggingface.co/rohitag13/whisper-hindi2hinglish-swift-GGUF/resolve/main/ggml-hinglish-swift-q5_1.bin",
+            sizeBytes = 59_707_625L,
+            description = "Oriserve Hindi2Hinglish-Swift fine-tune of Whisper Base: Roman Hinglish output at Base speed. Use with Hinglish mode. ~57 MB"
+        )
         val SMALL_Q5_1 = WhisperModel(
             id = "small_q5_1",
             name = "Small Quantized Q5_1 (Best Hindi/English)",
@@ -65,7 +73,7 @@ data class WhisperModel(
             sizeBytes = 466_000_000L,
             description = "Higher accuracy, slower. ~466 MB"
         )
-        val ALL = listOf(BASE_Q5_1, BASE, SMALL_Q5_1, TINY, SMALL)
+        val ALL = listOf(BASE_Q5_1, HINGLISH_Q5_1, BASE, SMALL_Q5_1, TINY, SMALL)
     }
 }
 

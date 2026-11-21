@@ -133,7 +133,9 @@ class VoiceFlowAccessibilityService : AccessibilityService() {
     }
 
     private fun showFloatingMicForNode(node: AccessibilityNodeInfo, packageName: String) {
-        val text = node.text?.toString() ?: ""
+        // An empty field's node.text is its hint/placeholder (e.g. WhatsApp's
+        // "Message") — that is not user text and must not be kept as a prefix.
+        val text = if (node.isShowingHintText) "" else node.text?.toString() ?: ""
         val selectionStart = node.textSelectionStart
         val selectionEnd = node.textSelectionEnd
         val viewId = node.viewIdResourceName ?: ""

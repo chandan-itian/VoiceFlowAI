@@ -189,7 +189,7 @@ class TextInsertionEngine @Inject constructor(
                 isEditable = node.isEditable,
                 isSensitive = false,
                 isPassword = node.isPassword,
-                currentText = node.text?.toString() ?: "",
+                currentText = if (node.isShowingHintText) "" else node.text?.toString() ?: "",
                 selectionStart = node.textSelectionStart,
                 selectionEnd = node.textSelectionEnd
             )
@@ -216,7 +216,10 @@ class TextInsertionEngine @Inject constructor(
         fieldInfo: FieldInfo
     ): Boolean {
         return try {
-            val liveText = node.text?.toString() ?: fieldInfo.currentText
+            // When the field is empty, node.text returns the hint/placeholder
+            // (e.g. "Message" in WhatsApp), not real content — treat it as empty
+            // so the hint is never prepended to the transcription.
+            val liveText = if (node.isShowingHintText) "" else node.text?.toString() ?: fieldInfo.currentText
             val liveFieldInfo = fieldInfo.copy(currentText = liveText)
             val finalText = buildInsertionText(text, liveFieldInfo)
             val args = Bundle().apply {
