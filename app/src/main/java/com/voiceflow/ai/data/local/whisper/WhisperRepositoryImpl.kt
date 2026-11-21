@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.voiceflow.ai.domain.model.TranscriptionResult
 import com.voiceflow.ai.domain.model.WhisperModel
+import com.voiceflow.ai.domain.repository.SettingsRepository
 import com.voiceflow.ai.domain.repository.WhisperRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +21,8 @@ import javax.inject.Singleton
 
 @Singleton
 class WhisperRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val settingsRepository: SettingsRepository
 ) : WhisperRepository {
 
     companion object {
@@ -82,17 +84,27 @@ class WhisperRepositoryImpl @Inject constructor(
     override suspend fun ensureModelLoaded(): Boolean = withContext(Dispatchers.IO) {
         if (isModelLoaded()) return@withContext true
 
+        // Read the user's selected model before taking the lock. If settings
+        // cannot be read, fall back to "base" rather than failing the load.
+        val selectedModelId = runCatching { settingsRepository.getSettings().selectedWhisperModel }
+            .getOrDefault("base")
+        val selectedModel = WhisperModel.ALL.find { it.id == selectedModelId }
+
         mutex.withLock {
             if (contextPtr != 0L && jni.isContextValid(contextPtr)) {
                 return@withContext true
             }
 
-            // Look for downloaded models in priority: Base -> Small -> Tiny -> any .bin > 10MB
-            val candidateFiles = listOf(
-                File(modelsDir, WhisperModel.BASE.fileName),
-                File(modelsDir, WhisperModel.SMALL.fileName),
-                File(modelsDir, WhisperModel.TINY.fileName)
-            ) + (modelsDir.listFiles { f -> f.extension == "bin" && f.length() > 10 * 1024 * 1024 }?.toList() ?: emptyList())
+            // Priority: the model the user activated first, then the catalog
+            // in its listed order (Base Q5_1, Base, Small Q5_1, Tiny, Small),
+            // then any other downloaded .bin > 10MB. Previously this ignored
+            // the selection entirely and tried Base -> Small -> Tiny, so a
+            // restart could silently load Base 142MB instead of the
+            // selected Small Q5_1.
+            val orderedModels = listOfNotNull(selectedModel) +
+                WhisperModel.ALL.filter { it != selectedModel }
+            val candidateFiles = orderedModels.map { File(modelsDir, it.fileName) } +
+                (modelsDir.listFiles { f -> f.extension == "bin" && f.length() > 10 * 1024 * 1024 }?.toList() ?: emptyList())
 
             val modelToLoad = candidateFiles.firstOrNull { it.exists() && it.length() > 10 * 1024 * 1024 }
             if (modelToLoad != null) {
@@ -124,14 +136,19 @@ class WhisperRepositoryImpl @Inject constructor(
             ensureModelLoaded()
         }
 
+        // Use the user's CPU Threads setting (default 4, slider 1-8) instead
+        // of a hardcoded value. Previously this was always 2, so the
+        // setting in AI Settings had no effect.
+        val threads = runCatching { settingsRepository.getSettings().cpuThreads }
+            .getOrDefault(4).coerceIn(1, 8)
+
         mutex.withLock {
             require(contextPtr != 0L && jni.isContextValid(contextPtr)) {
                 "No Whisper model loaded. Please download a model from Offline Whisper Models in Settings."
             }
 
             val start = System.currentTimeMillis()
-            // 2 threads pinned to Cortex-A78 Big cores on Snapdragon 695 for optimal latency
-            val text = jni.transcribe(contextPtr, audioPath, language, 2, initialPrompt)
+            val text = jni.transcribe(contextPtr, audioPath, language, threads, initialPrompt)
             val durationMs = System.currentTimeMillis() - start
 
             TranscriptionResult(

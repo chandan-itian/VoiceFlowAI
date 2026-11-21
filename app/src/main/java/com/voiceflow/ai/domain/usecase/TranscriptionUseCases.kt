@@ -28,7 +28,14 @@ class StopRecordingAndTranscribeUseCase @Inject constructor(
             val (defaultLangHint, defaultPromptHint) = when (settings.languageMode) {
                 LanguageMode.HINDI -> "hi" to "नमस्ते, आप कैसे हैं, क्या हाल है, धन्यवाद, ठीक है, हाँ, नहीं, मैं, हम, आप, यह, वह, अच्छा, बहुत बढ़िया"
                 LanguageMode.ENGLISH -> "en" to "Hello, thank you, please, could you, how are you, alright, sounds good, yes, no, what, where, when, why"
-                LanguageMode.HINGLISH -> "hi" to "Hello, kya haal hai, kaise ho, theek hai, please, thanks, chalo chalte hain, kya kar rahe ho, main theek hoon, accha, done, alright"
+                // Hinglish is Roman in this app (see TranscriptionSettingsScreen:
+                // "Romanized Hindi mixed with English"). Forcing "hi" made
+                // Whisper output Devanagari, which HinglishNormalizer then
+                // transliterated back to Roman — a lossy round-trip. "en"
+                // outputs Roman directly; the normalizer still converts any
+                // Devanagari that slips through, so this is safe to test
+                // with the existing Base / Small Q5_1 models.
+                LanguageMode.HINGLISH -> "en" to "Hello, kya haal hai, kaise ho, theek hai, please, thanks, chalo chalte hain, kya kar rahe ho, main theek hoon, accha, done, alright"
                 LanguageMode.ENGLISH_TRANSLATION -> "translate_to_en" to "Translate Indian speech to English: Hello, how are you, thank you, yes, alright"
                 LanguageMode.AUTO -> "" to "Hello, नमस्ते, thank you, शुक्रिया, okay, ठीक है, please, धन्यवाद, क्या हाल है"
             }

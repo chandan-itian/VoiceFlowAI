@@ -69,6 +69,11 @@ class AiProviderRepositoryImpl @Inject constructor(
     }
 
     private fun getDefaultInitialProviders(): List<AiProvider> {
+        // Fresh installs default to Groq Fast Whisper: it is this app's
+        // primary online transcription provider. Previously Gemini was the
+        // default, so ONLINE mode silently used Gemini even after the user
+        // added a Groq key. Existing installs keep the default saved in
+        // providers.json — change it in Provider Manager if needed.
         return listOf(
             AiProvider(
                 id = "gemini_default",
@@ -76,7 +81,7 @@ class AiProviderRepositoryImpl @Inject constructor(
                 type = ProviderType.GEMINI,
                 baseUrl = "https://generativelanguage.googleapis.com",
                 modelId = "gemini-1.5-flash",
-                isDefault = true,
+                isDefault = false,
                 supportsAudioInput = true,
                 supportsTextRefinement = true
             ),
@@ -86,7 +91,7 @@ class AiProviderRepositoryImpl @Inject constructor(
                 type = ProviderType.GROQ,
                 baseUrl = "https://api.groq.com/openai/v1",
                 modelId = "whisper-large-v3",
-                isDefault = false,
+                isDefault = true,
                 supportsAudioInput = true,
                 supportsTextRefinement = true
             ),
@@ -168,11 +173,26 @@ class AiProviderRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getDefaultProvider(): AiProvider? = withContext(Dispatchers.IO) {
-        val provider = _providersFlow.value.find { it.isDefault }
-            ?: _providersFlow.value.firstOrNull()
-            ?: return@withContext null
-        val storedKey = secureStorage.getApiKey(provider.id) ?: ""
-        provider.copy(apiKey = storedKey)
+        val providers = _providersFlow.value
+        if (providers.isEmpty()) return@withContext null
+
+        // Attach stored keys up front so selection can take them into account.
+        val withKeys = providers.map { provider ->
+            provider.copy(apiKey = secureStorage.getApiKey(provider.id) ?: "")
+        }
+        val markedDefault = withKeys.find { it.isDefault }
+
+        // Priority:
+        // 1. The marked default, if it has a usable API key.
+        // 2. Any other provider that has a usable API key — previously the
+        //    marked default was returned even with a blank key, so adding a
+        //    Groq key (without also tapping "Set Default") still left ONLINE
+        //    mode calling Gemini with no key and failing.
+        // 3. The marked default / first provider, key or not, so callers can
+        //    surface a clear "API key is required" error.
+        markedDefault?.takeIf { it.apiKey.isNotBlank() }?.let { return@withContext it }
+        withKeys.find { it.apiKey.isNotBlank() }?.let { return@withContext it }
+        markedDefault ?: withKeys.first()
     }
 
     override suspend fun setDefaultProvider(id: String) = withContext(Dispatchers.IO) {
