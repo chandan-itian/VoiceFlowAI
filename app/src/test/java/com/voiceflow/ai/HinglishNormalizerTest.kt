@@ -11,6 +11,10 @@ class HinglishNormalizerTest {
     fun repairsMixedModelComparisonWithoutChangingEnglishMen() {
         val input = "To donon mdal men se kaun sa mdal ko main yooj karoo?"
         assertEquals("To dono models mein se kaun sa model ko main use karun?", HinglishNormalizer.normalize(input, true))
+        assertEquals(
+            "Aur ye bhi batayein ki aakhir dono kyun best hain?",
+            HinglishNormalizer.normalize("aur ye bhee bataen ki donon aakhir donon kyon best hai?", true)
+        )
         assertEquals("Two men use models.", HinglishNormalizer.normalize("Two men use models.", true))
         assertEquals("Dono models mein se.", HinglishNormalizer.normalize("दोनों मॉडल में से", true))
     }

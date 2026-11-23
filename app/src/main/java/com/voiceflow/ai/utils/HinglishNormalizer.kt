@@ -68,7 +68,7 @@ object HinglishNormalizer {
 
     // Standardized Hinglish spelling dictionary for common colloquial variations
     private val HINGLISH_STANDARDIZATIONS = mapOf(
-        "donon" to "dono", "bhee" to "bhi", "kyon" to "kyun", "karoo" to "karun",
+        "bataen" to "batayein", "donon" to "dono", "bhee" to "bhi", "kyon" to "kyun", "karoo" to "karun",
         "बताएं" to "batayein", "करूँ" to "karun", "करूं" to "karun",
         "दोनों" to "dono", "में" to "mein", "मैं" to "main", "भी" to "bhi",
         "क्यों" to "kyun", "हैं" to "hain",
@@ -94,6 +94,9 @@ object HinglishNormalizer {
     private val comparison = Regex("""(?iu)\b(dono|donon) (model|models) (men|mein|me) se\b""")
     private val hindiPostposition = Regex("""(?iu)\bmen(?= se\b)""")
 
+    private val repeatedSubject = Regex("""(?iu)\bdono (aakhir|akhir) dono\b""")
+    private val pluralAssessment = Regex("""(?iu)\b(dono (?:kyun |kyon )?best) hai\b""")
+
     // Hindi and English filler words
     private val FILLER_PATTERNS = listOf(
         "\\bumm+\\b",
@@ -108,7 +111,7 @@ object HinglishNormalizer {
     ).map { Regex(it, RegexOption.IGNORE_CASE) }
 
     private val slangPatterns = HINGLISH_STANDARDIZATIONS.map { (slang, standard) ->
-        Regex("\\b${Regex.escape(slang)}\\b", RegexOption.IGNORE_CASE) to standard
+        Regex("(?<![\\p{L}\\p{M}\\p{N}_])${Regex.escape(slang)}(?![\\p{L}\\p{M}\\p{N}_])", RegexOption.IGNORE_CASE) to standard
     }
 
     // Devanagari character to Roman transliteration map for Hinglish fallback
@@ -185,6 +188,8 @@ object HinglishNormalizer {
             if (containsDevanagari(text)) text = devanagariToHinglish(text)
             text = comparison.replace(text, "dono models mein se")
             text = hindiPostposition.replace(text, "mein")
+            text = repeatedSubject.replace(text) { "${it.groupValues[1]} dono" }
+            text = pluralAssessment.replace(text) { "${it.groupValues[1]} hain" }
         }
 
         // Remove filler words
