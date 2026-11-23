@@ -1,2 +1,2 @@
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:inset="26dp" android:drawable="@drawable/ic_wispr_flow" />
+    android:inset="24%" android:drawable="@drawable/ic_wispr_flow" />
