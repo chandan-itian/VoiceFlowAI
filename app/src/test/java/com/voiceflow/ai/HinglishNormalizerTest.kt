@@ -8,6 +8,14 @@ import org.junit.Test
 class HinglishNormalizerTest {
 
     @Test
+    fun restoresEnglishWordsInMixedDictation() {
+        assertEquals("Mujhe knowledge hai.", HinglishNormalizer.normalize("मुझे नॉलेज है", true))
+        assertEquals("Meri meeting ka feedback do.", HinglishNormalizer.normalize("meri मीटिंग ka फीडबैक do", true))
+        assertEquals("Mujhe knowledge hai.", HinglishNormalizer.normalize("mujhe nolej hai", true))
+        assertEquals("Her knowledge is invaluable.", HinglishNormalizer.normalize("Her knowledge is invaluable.", true))
+    }
+
+    @Test
     fun testHinglishSpokenSentenceNormalization() {
         val input = "bhai meri website ka dashboard update kar do aur booking system bhi check kar lena"
         val output = HinglishNormalizer.normalize(

@@ -2,6 +2,20 @@ package com.voiceflow.ai.utils
 
 object HinglishNormalizer {
 
+    // Recover common English loanwords even when the cloud formatter is unavailable.
+    private val englishSpellings = mapOf(
+        "नॉलेज" to "knowledge", "नॉलेज़" to "knowledge", "नालेज" to "knowledge",
+        "नॉलेड्ज" to "knowledge", "nolej" to "knowledge", "nawlej" to "knowledge",
+        "naalej" to "knowledge", "naulej" to "knowledge", "nolege" to "knowledge", "knolej" to "knowledge",
+        "मीटिंग" to "meeting", "प्रोजेक्ट" to "project", "अपडेट" to "update",
+        "फीडबैक" to "feedback", "डेडलाइन" to "deadline", "ईमेल" to "email",
+        "सॉफ्टवेयर" to "software", "डैशबोर्ड" to "dashboard"
+    )
+    private val englishWord = Regex(
+        "(?<![\\p{L}\\p{M}\\p{N}_])(?:" + englishSpellings.keys.joinToString("|") { Regex.escape(it) } +
+            ")(?![\\p{L}\\p{M}\\p{N}_])", RegexOption.IGNORE_CASE
+    )
+
     // Technical terms that should always maintain proper casing
     private val TECHNICAL_TERMS = mapOf(
         "api" to "API",
@@ -80,7 +94,11 @@ object HinglishNormalizer {
         "\\barre\\b(?=\\s*,)",
         "\\byou know\\b(?=\\s*,)",
         "\\blike\\b(?=\\s*,)"
-    )
+    ).map { Regex(it, RegexOption.IGNORE_CASE) }
+
+    private val slangPatterns = HINGLISH_STANDARDIZATIONS.map { (slang, standard) ->
+        Regex("\\b${Regex.escape(slang)}\\b", RegexOption.IGNORE_CASE) to standard
+    }
 
     // Devanagari character to Roman transliteration map for Hinglish fallback
     private val DEVANAGARI_MAP = mapOf(
@@ -149,14 +167,15 @@ object HinglishNormalizer {
 
         // If user explicitly selected Hinglish mode and Whisper produced Devanagari script,
         // convert to clean Romanized Hinglish.
-        if (isHinglishMode && containsDevanagari(text)) {
-            text = devanagariToHinglish(text)
+        if (isHinglishMode) {
+            text = englishWord.replace(text) { englishSpellings.getValue(it.value.lowercase()) }
+            if (containsDevanagari(text)) text = devanagariToHinglish(text)
         }
 
         // Remove filler words
         if (removeFillers) {
             for (pattern in FILLER_PATTERNS) {
-                text = text.replace(Regex(pattern, RegexOption.IGNORE_CASE), "")
+                text = text.replace(pattern, "")
             }
             text = text.replace(Regex("[ \\t]{2,}"), " ")
         }
@@ -174,8 +193,8 @@ object HinglishNormalizer {
         text = words.joinToString(" ")
 
         // Common Hinglish compound words
-        for ((slang, standard) in HINGLISH_STANDARDIZATIONS) {
-            text = text.replace(Regex("\\b$slang\\b", RegexOption.IGNORE_CASE), standard)
+        for ((pattern, standard) in slangPatterns) {
+            text = text.replace(pattern, standard)
         }
 
         // Punctuation

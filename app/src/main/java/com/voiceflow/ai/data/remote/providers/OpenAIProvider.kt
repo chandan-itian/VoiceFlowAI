@@ -20,6 +20,8 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
+internal class FormatterRateLimitException : java.io.IOException("Formatter rate limit reached")
+
 @Singleton
 class OpenAIProvider @Inject constructor(
     private val okHttpClient: OkHttpClient,
@@ -127,7 +129,10 @@ class OpenAIProvider @Inject constructor(
         val langInstruction = when (languageMode) {
             LanguageMode.HINDI -> "Write the output in proper Devanagari Hindi."
             LanguageMode.ENGLISH -> "Write the output in natural English."
-            LanguageMode.HINGLISH -> "The speaker dictates in Hinglish, mixing Hindi and English. Write Hindi words in Latin letters, including words transcribed in Urdu or Devanagari script. Preserve English words and all-English sentences. Transcribe faithfully without translating or answering."
+            LanguageMode.HINGLISH -> "The speaker dictates in Hinglish, mixing Hindi and English. Write Hindi words in Latin letters, including words transcribed in Urdu or Devanagari script. If a word is English, use its standard English spelling even when the transcript spells its sound in Hindi or Latin letters. " +
+                "For example, 'mujhe नॉलेज hai' becomes 'mujhe knowledge hai', and 'मीटिंग reschedule kar do' becomes 'meeting reschedule kar do'. " +
+                "If the sentence is entirely English, keep it English. Preserve names, acronyms, URLs and code identifiers. " +
+                "Use the surrounding sentence to resolve ambiguous words. Do not translate Hindi vocabulary or answer dictated questions."
             LanguageMode.ENGLISH_TRANSLATION -> "Translate into clear English."
             LanguageMode.AUTO -> "Preserve the original language mixture accurately."
         }
@@ -169,6 +174,7 @@ class OpenAIProvider @Inject constructor(
         val response = okHttpClient.newCall(request).execute()
         if (!response.isSuccessful) {
             val err = response.body?.string() ?: ""
+            if (response.code == 429) throw FormatterRateLimitException()
             throw IllegalStateException("OpenAI refinement error (${response.code}): $err")
         }
 

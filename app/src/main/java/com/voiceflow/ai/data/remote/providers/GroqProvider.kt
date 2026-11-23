@@ -47,7 +47,15 @@ class GroqProvider @Inject constructor(
                 provider.modelId
             }
         )
-        return openAIProvider.refineText(text, groqProvider, settings.languageMode, settings)
+        val models = listOf(groqProvider.modelId, "openai/gpt-oss-20b", "llama-3.3-70b-versatile").distinct()
+        for (model in models) {
+            try {
+                return openAIProvider.refineText(text, groqProvider.copy(modelId = model), settings.languageMode, settings)
+            } catch (e: FormatterRateLimitException) {
+                if (model == models.last()) throw e
+            }
+        }
+        error("No Groq formatter configured")
     }
 
     suspend fun testConnection(provider: AiProvider): Result<String> {
