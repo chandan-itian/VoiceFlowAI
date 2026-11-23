@@ -7,6 +7,8 @@ package com.voiceflow.ai.data.local.whisper
  * appropriate jniLibs directories (armeabi-v7a, arm64-v8a, x86_64).
  */
 class WhisperJni {
+    external fun speechRanges(modelPath: String, wavPath: String): LongArray?
+
 
     /**
      * Initialises a Whisper context from the given GGML model file.

@@ -95,6 +95,8 @@ enum class ProviderType {
     LOCAL_WHISPER, GEMINI, OPENROUTER, GROQ, OPENAI, CUSTOM_OPENAI
 }
 
+data class RecordedAudio(val path: String, val hasSpeech: Boolean)
+
 data class TranscriptionResult(
     val text: String,
     val rawText: String = text,

@@ -21,9 +21,17 @@ class GroqDictationTest {
 
     init {
         coEvery { preferences.getSettings() } returns settings
-        coEvery { audio.stopRecording() } returns "recording.wav"
+        coEvery { audio.stopRecording() } returns RecordedAudio("recording.wav", true)
         coEvery { providers.getDefaultProvider() } returns provider
         coEvery { providers.transcribeOnline("recording.wav", provider) } returns TranscriptionResult(raw)
+    }
+
+    @Test
+    fun silenceSkipsBothInferenceStages() = runTest {
+        coEvery { audio.stopRecording() } returns RecordedAudio("recording.wav", false)
+        assertEquals("", stop().getOrThrow().text)
+        verify { providers wasNot Called }
+        verify { whisper wasNot Called }
     }
 
     @Test

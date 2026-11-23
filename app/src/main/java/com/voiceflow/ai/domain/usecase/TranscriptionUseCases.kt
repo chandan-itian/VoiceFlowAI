@@ -20,12 +20,13 @@ class StopRecordingAndTranscribeUseCase @Inject constructor(
     private val processTextUseCase: ProcessTextUseCase
 ) {
     suspend operator fun invoke(): Result<TranscriptionResult> {
-        val audioPath = audioRepository.stopRecording()
+        val recording = audioRepository.stopRecording()
             ?: return Result.failure(Exception("No audio recorded"))
 
-        val settings = settingsRepository.getSettings()
-
+        val audioPath = recording.path
         return try {
+            if (!recording.hasSpeech) return Result.success(TranscriptionResult(""))
+            val settings = settingsRepository.getSettings()
             val (defaultLangHint, defaultPromptHint) = when (settings.languageMode) {
                 LanguageMode.HINDI -> "hi" to "नमस्ते, आप कैसे हैं, क्या हाल है, धन्यवाद, ठीक है, हाँ, नहीं, मैं, हम, आप, यह, वह, अच्छा, बहुत बढ़िया"
                 LanguageMode.ENGLISH -> "en" to "Hello, thank you, please, could you, how are you, alright, sounds good, yes, no, what, where, when, why"
@@ -84,6 +85,8 @@ class StopRecordingAndTranscribeUseCase @Inject constructor(
             throw e
         } catch (e: Exception) {
             Result.failure(e)
+        } finally {
+            java.io.File(audioPath).delete()
         }
     }
 

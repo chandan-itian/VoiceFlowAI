@@ -3,6 +3,7 @@ package com.voiceflow.ai.data.remote.providers
 import android.util.Log
 import com.voiceflow.ai.data.model.*
 import com.voiceflow.ai.domain.model.AppSettings
+import com.voiceflow.ai.domain.model.ProviderType
 import com.voiceflow.ai.domain.model.AiProvider
 import com.voiceflow.ai.domain.model.LanguageMode
 import com.voiceflow.ai.domain.model.TranscriptionResult
@@ -42,7 +43,27 @@ class OpenAIProvider @Inject constructor(
         val baseUrl = provider.baseUrl.ifBlank { DEFAULT_BASE_URL }.trimEnd('/')
         val model = provider.modelId.ifBlank { DEFAULT_TRANSCRIPTION_MODEL }
 
-        val fileBody = audioFile.asRequestBody("audio/wav".toMediaType())
+        if (provider.type != ProviderType.GROQ && provider.type != ProviderType.OPENAI) {
+            return@withContext upload(audioFile, "audio/wav", provider, baseUrl, model)
+        }
+        val compressed = File.createTempFile("dictation-", ".m4a", audioFile.parentFile)
+        try {
+            val encoded = try {
+                M4aUpload.encode(audioFile, compressed)
+                compressed.length() in 1 until audioFile.length()
+            } catch (e: Exception) {
+                Log.w(TAG, "AAC encoder unavailable, using PCM", e)
+                false
+            }
+            if (encoded) upload(compressed, "audio/mp4", provider, baseUrl, model)
+            else upload(audioFile, "audio/wav", provider, baseUrl, model)
+        } finally {
+            compressed.delete()
+        }
+    }
+
+    private fun upload(audioFile: File, mime: String, provider: AiProvider, baseUrl: String, model: String): TranscriptionResult {
+        val fileBody = audioFile.asRequestBody(mime.toMediaType())
         val multipartBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("file", audioFile.name, fileBody)
@@ -69,7 +90,7 @@ class OpenAIProvider @Inject constructor(
         val responseBody = response.body?.string() ?: ""
         val parsed = json.decodeFromString(OpenAiTranscriptionResponse.serializer(), responseBody)
 
-        TranscriptionResult(
+        return TranscriptionResult(
             text = parsed.text.trim(),
             rawText = parsed.text.trim(),
             durationMs = duration,

@@ -25,7 +25,7 @@ interface WhisperRepository {
 
 interface AudioRepository {
     suspend fun startRecording(): Boolean
-    suspend fun stopRecording(): String?
+    suspend fun stopRecording(): RecordedAudio?
     fun isRecording(): Boolean
     fun cancelRecording()
     val amplitudeFlow: Flow<Float>

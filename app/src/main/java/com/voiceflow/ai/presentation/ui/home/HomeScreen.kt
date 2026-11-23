@@ -3,6 +3,8 @@ package com.voiceflow.ai.presentation.ui.home
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.voiceflow.ai.domain.model.AiMode
 import com.voiceflow.ai.presentation.ui.components.SectionHeader
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -70,47 +72,43 @@ fun HomeScreen(
                     }
                 )
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .toggleable(state.isAppEnabled, role = Role.Switch) { viewModel.toggleAppEnabled() }
+                        .padding(24.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(
-                                MaterialTheme.colorScheme.primary
-                            ),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_wispr_flow),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(26.dp)
-                        )
+                        Box(
+                            modifier = Modifier.size(44.dp).clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_wispr_flow),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Switch(checked = state.isAppEnabled, onCheckedChange = null)
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (state.isAppEnabled) "Dictation enabled" else "Dictation paused",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = when {
-                                !state.isAppEnabled -> "Turn on to use the floating mic"
-                                !state.hasRequiredPermissions -> "Complete microphone setup below"
-                                else -> "Open a text field to dictate"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = state.isAppEnabled,
-                        onCheckedChange = { viewModel.toggleAppEnabled() }
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = if (state.isAppEnabled) "Dictation enabled" else "Dictation paused",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = when {
+                            !state.isAppEnabled -> "Turn on to use the floating mic"
+                            !state.hasRequiredPermissions -> "Complete microphone setup below"
+                            else -> "Open a text field to dictate"
+                        },
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
