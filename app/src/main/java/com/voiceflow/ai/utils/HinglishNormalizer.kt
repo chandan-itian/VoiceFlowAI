@@ -7,6 +7,10 @@ object HinglishNormalizer {
         "नॉलेज" to "knowledge", "नॉलेज़" to "knowledge", "नालेज" to "knowledge",
         "नॉलेड्ज" to "knowledge", "nolej" to "knowledge", "nawlej" to "knowledge",
         "naalej" to "knowledge", "naulej" to "knowledge", "nolege" to "knowledge", "knolej" to "knowledge",
+        "मॉडल" to "model", "मॉडेल" to "model", "मॉडल्स" to "models",
+        "mdal" to "model", "mdals" to "models",
+        "यूज" to "use", "यूज़" to "use", "यूज़" to "use", "yooj" to "use", "yooz" to "use",
+        "बेस्ट" to "best",
         "मीटिंग" to "meeting", "प्रोजेक्ट" to "project", "अपडेट" to "update",
         "फीडबैक" to "feedback", "डेडलाइन" to "deadline", "ईमेल" to "email",
         "सॉफ्टवेयर" to "software", "डैशबोर्ड" to "dashboard"
@@ -64,7 +68,10 @@ object HinglishNormalizer {
 
     // Standardized Hinglish spelling dictionary for common colloquial variations
     private val HINGLISH_STANDARDIZATIONS = mapOf(
-        "karo" to "kar do",
+        "donon" to "dono", "bhee" to "bhi", "kyon" to "kyun", "karoo" to "karun",
+        "बताएं" to "batayein", "करूँ" to "karun", "करूं" to "karun",
+        "दोनों" to "dono", "में" to "mein", "मैं" to "main", "भी" to "bhi",
+        "क्यों" to "kyun", "हैं" to "hain",
         "kardo" to "kar do",
         "karlo" to "kar lo",
         "karlena" to "kar lena",
@@ -82,6 +89,10 @@ object HinglishNormalizer {
         "dm" to "DM",
         "wfh" to "WFH"
     )
+
+    // "men" is also a valid English word. Repair it only in a Hindi construction.
+    private val comparison = Regex("""(?iu)\b(dono|donon) (model|models) (men|mein|me) se\b""")
+    private val hindiPostposition = Regex("""(?iu)\bmen(?= se\b)""")
 
     // Hindi and English filler words
     private val FILLER_PATTERNS = listOf(
@@ -112,6 +123,7 @@ object HinglishNormalizer {
         'अ' to "a", 'आ' to "aa", 'इ' to "i", 'ई' to "ee", 'उ' to "u", 'ऊ' to "oo",
         'ऋ' to "ri", 'ए' to "e", 'ऐ' to "ai", 'ओ' to "o", 'औ' to "au",
         'ा' to "a", 'ि' to "i", 'ी' to "ee", 'ु' to "u", 'ू' to "oo",
+        'ॉ' to "o", 'ॅ' to "e", 'ँ' to "n",
         'ृ' to "ri", 'े' to "e", 'ै' to "ai", 'ो' to "o", 'ौ' to "au",
         'ं' to "n", 'ः' to "h", '्' to ""
     )
@@ -168,8 +180,11 @@ object HinglishNormalizer {
         // If user explicitly selected Hinglish mode and Whisper produced Devanagari script,
         // convert to clean Romanized Hinglish.
         if (isHinglishMode) {
+            for ((pattern, standard) in slangPatterns) text = text.replace(pattern, standard)
             text = englishWord.replace(text) { englishSpellings.getValue(it.value.lowercase()) }
             if (containsDevanagari(text)) text = devanagariToHinglish(text)
+            text = comparison.replace(text, "dono models mein se")
+            text = hindiPostposition.replace(text, "mein")
         }
 
         // Remove filler words
@@ -191,11 +206,6 @@ object HinglishNormalizer {
             }
         }
         text = words.joinToString(" ")
-
-        // Common Hinglish compound words
-        for ((pattern, standard) in slangPatterns) {
-            text = text.replace(pattern, standard)
-        }
 
         // Punctuation
         if (fixPunctuation) {

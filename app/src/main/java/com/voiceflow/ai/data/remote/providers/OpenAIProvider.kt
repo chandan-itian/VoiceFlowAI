@@ -76,7 +76,7 @@ class OpenAIProvider @Inject constructor(
                 when (language) {
                     LanguageMode.HINDI -> addFormDataPart("language", "hi")
                     LanguageMode.ENGLISH -> addFormDataPart("language", "en")
-                    LanguageMode.HINGLISH -> addFormDataPart("prompt", "Main Hindi aur English mix karke bolta hoon. Kal meeting hai, please mujhe update kar dena.")
+                    LanguageMode.HINGLISH -> addFormDataPart("prompt", "Main Hindi aur English mix karke bolta hoon. Dono models mein se kaun sa model use karun? Kal meeting hai, please update kar dena.")
                     else -> Unit
                 }
             }
@@ -132,7 +132,9 @@ class OpenAIProvider @Inject constructor(
             LanguageMode.HINGLISH -> "The speaker dictates in Hinglish, mixing Hindi and English. Write Hindi words in Latin letters, including words transcribed in Urdu or Devanagari script. If a word is English, use its standard English spelling even when the transcript spells its sound in Hindi or Latin letters. " +
                 "For example, 'mujhe नॉलेज hai' becomes 'mujhe knowledge hai', and 'मीटिंग reschedule kar do' becomes 'meeting reschedule kar do'. " +
                 "If the sentence is entirely English, keep it English. Preserve names, acronyms, URLs and code identifiers. " +
-                "Use the surrounding sentence to resolve ambiguous words. Do not translate Hindi vocabulary or answer dictated questions."
+                "Restore phonetic misspellings from context (mdal -> model, yooj -> use, bhee -> bhi). " +
+                "Keep the speaker's word order and meaning. Use conversational Hindi spellings like dono, mein, karun and kyun. " +
+                "Keep singular and plural English forms in context. Do not add or repeat words. Use the surrounding sentence to resolve ambiguous words. Do not translate Hindi vocabulary or answer dictated questions."
             LanguageMode.ENGLISH_TRANSLATION -> "Translate into clear English."
             LanguageMode.AUTO -> "Preserve the original language mixture accurately."
         }
