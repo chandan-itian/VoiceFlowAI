@@ -93,7 +93,8 @@ data class OpenAiChatResponse(
 
 @Serializable
 data class OpenAiChoice(
-    val message: OpenAiMessage? = null
+    val message: OpenAiMessage? = null,
+    @SerialName("finish_reason") val finishReason: String? = null
 )
 
 @Serializable

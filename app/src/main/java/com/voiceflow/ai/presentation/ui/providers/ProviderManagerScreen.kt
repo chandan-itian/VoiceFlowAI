@@ -214,7 +214,8 @@ private fun ProviderDialog(
                 OutlinedTextField(
                     value = apiKey,
                     onValueChange = { apiKey = it },
-                    label = { Text("API Key (Encrypted in Keystore)") },
+                    label = { Text("API key") },
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -222,7 +223,10 @@ private fun ProviderDialog(
                 OutlinedTextField(
                     value = modelId,
                     onValueChange = { modelId = it },
-                    label = { Text("Model ID (e.g. gemini-1.5-flash, whisper-1)") },
+                    label = { Text("Model ID") },
+                    supportingText = if (selectedType == ProviderType.GROQ) {
+                        { Text("Use a Whisper model for audio. Formatting defaults to Llama 3.1 8B Instant.") }
+                    } else null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )

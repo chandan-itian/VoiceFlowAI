@@ -158,7 +158,7 @@ object HinglishNormalizer {
             for (pattern in FILLER_PATTERNS) {
                 text = text.replace(Regex(pattern, RegexOption.IGNORE_CASE), "")
             }
-            text = text.replace(Regex("\\s{2,}"), " ")
+            text = text.replace(Regex("[ \\t]{2,}"), " ")
         }
 
         // Apply technical vocabulary and brand casing

@@ -3,6 +3,7 @@ package com.voiceflow.ai.domain.usecase
 import com.voiceflow.ai.domain.model.*
 import com.voiceflow.ai.domain.repository.*
 import com.voiceflow.ai.utils.HinglishNormalizer
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 
 class StartRecordingUseCase @Inject constructor(
@@ -54,19 +55,14 @@ class StopRecordingAndTranscribeUseCase @Inject constructor(
                     } catch (e: UnsupportedOperationException) {
                         // For text-only LLM providers like OpenRouter, transcribe with Whisper first, then refine with the LLM
                         val localResult = whisperRepository.transcribe(audioPath, defaultLangHint, defaultPromptHint)
-                        val refined = try {
-                            providerRepository.refineText(localResult.text, provider, settings.languageMode)
-                        } catch (refineError: Exception) {
-                            localResult.text
-                        }
                         localResult.copy(
-                            text = refined,
                             provider = "${provider.name} (Whisper + ${provider.type.name})",
                             isOffline = false
                         )
                     }
-                    val processed = processTextUseCase(rawResult.text)
-                    rawResult.copy(text = processed)
+                    val needsFormatter = provider.type == ProviderType.GROQ || provider.type == ProviderType.OPENROUTER
+                    val text = if (needsFormatter) refineOrKeep(rawResult.text, provider, settings) else rawResult.text
+                    rawResult.copy(text = processTextUseCase(text))
                 }
                 AiMode.SMART_HYBRID -> {
                     // Step 1: Transcribe locally using fast Whisper with vocabulary biasing prompt
@@ -74,17 +70,8 @@ class StopRecordingAndTranscribeUseCase @Inject constructor(
                     val provider = providerRepository.getDefaultProvider()
 
                     // Step 2: If online provider is configured and available, perform refinement
-                    val textToUse = if (provider != null && provider.apiKey.isNotBlank() && provider.supportsTextRefinement) {
-                        try {
-                            providerRepository.refineText(
-                                offlineResult.text,
-                                provider,
-                                settings.languageMode
-                            )
-                        } catch (e: Exception) {
-                            // Fallback to local offline result
-                            offlineResult.text
-                        }
+                    val textToUse = if (provider != null && provider.apiKey.isNotBlank()) {
+                        refineOrKeep(offlineResult.text, provider, settings)
                     } else {
                         offlineResult.text
                     }
@@ -93,8 +80,21 @@ class StopRecordingAndTranscribeUseCase @Inject constructor(
                 }
             }
             Result.success(result)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private suspend fun refineOrKeep(text: String, provider: AiProvider, settings: AppSettings): String {
+        if (text.isBlank() || !provider.supportsTextRefinement) return text
+        return try {
+            providerRepository.refineText(text, provider, settings).ifBlank { text }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            text
         }
     }
 }

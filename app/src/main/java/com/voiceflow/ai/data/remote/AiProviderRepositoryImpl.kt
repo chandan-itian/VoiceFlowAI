@@ -8,7 +8,7 @@ import com.voiceflow.ai.data.remote.providers.GroqProvider
 import com.voiceflow.ai.data.remote.providers.OpenAIProvider
 import com.voiceflow.ai.data.remote.providers.OpenRouterProvider
 import com.voiceflow.ai.domain.model.AiProvider
-import com.voiceflow.ai.domain.model.LanguageMode
+import com.voiceflow.ai.domain.model.AppSettings
 import com.voiceflow.ai.domain.model.ProviderType
 import com.voiceflow.ai.domain.model.TranscriptionResult
 import com.voiceflow.ai.domain.repository.AiProviderRepository
@@ -249,13 +249,13 @@ class AiProviderRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun refineText(text: String, provider: AiProvider, language: LanguageMode): String {
+    override suspend fun refineText(text: String, provider: AiProvider, settings: AppSettings): String {
         val p = attachApiKey(provider)
         return when (p.type) {
-            ProviderType.GEMINI -> geminiProvider.refineText(text, p, language)
-            ProviderType.GROQ -> groqProvider.refineText(text, p, language)
-            ProviderType.OPENAI, ProviderType.CUSTOM_OPENAI -> openAIProvider.refineText(text, p, language)
-            ProviderType.OPENROUTER -> openRouterProvider.refineText(text, p, language)
+            ProviderType.GEMINI -> geminiProvider.refineText(text, p, settings.languageMode)
+            ProviderType.GROQ -> groqProvider.refineText(text, p, settings)
+            ProviderType.OPENAI, ProviderType.CUSTOM_OPENAI -> openAIProvider.refineText(text, p, settings.languageMode)
+            ProviderType.OPENROUTER -> openRouterProvider.refineText(text, p, settings.languageMode)
             ProviderType.LOCAL_WHISPER -> text
         }
     }

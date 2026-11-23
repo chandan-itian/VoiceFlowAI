@@ -42,7 +42,7 @@ interface AiProviderRepository {
     suspend fun testConnection(provider: AiProvider): Result<String>
     suspend fun fetchModels(provider: AiProvider): Result<List<String>>
     suspend fun transcribeOnline(audioPath: String, provider: AiProvider): TranscriptionResult
-    suspend fun refineText(text: String, provider: AiProvider, language: LanguageMode): String
+    suspend fun refineText(text: String, provider: AiProvider, settings: AppSettings): String
 }
 
 interface TextInsertionRepository {

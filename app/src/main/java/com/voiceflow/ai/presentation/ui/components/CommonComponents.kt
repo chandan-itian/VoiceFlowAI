@@ -1,6 +1,7 @@
 package com.voiceflow.ai.presentation.ui.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -66,14 +67,15 @@ fun SettingsSwitchItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .toggleable(checked, role = Role.Switch, onValueChange = onCheckedChange)
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -101,7 +103,7 @@ fun SettingsSwitchItem(
             }
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange
+                onCheckedChange = null
             )
         }
     }
@@ -117,11 +119,11 @@ fun SettingsClickableItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        onClick = onClick,
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
         Row(

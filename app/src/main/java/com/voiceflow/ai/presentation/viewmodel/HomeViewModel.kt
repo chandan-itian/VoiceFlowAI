@@ -23,9 +23,10 @@ data class HomeUiState(
     val hasAudioPermission: Boolean = false,
     val hasOverlayPermission: Boolean = false,
     val hasAccessibilityPermission: Boolean = false,
-    val hasNotificationPermission: Boolean = false,
-    val isReadyToDictate: Boolean = false
-)
+    val hasNotificationPermission: Boolean = false
+) {
+    val hasRequiredPermissions get() = hasAudioPermission && hasOverlayPermission && hasAccessibilityPermission
+}
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -43,7 +44,8 @@ class HomeViewModel @Inject constructor(
 
     private fun observeSettings() {
         viewModelScope.launch {
-            settingsRepository.settings.collect { settings ->
+            combine(settingsRepository.settings, providerRepository.getProviders()) { settings, _ -> settings }
+                .collect { settings ->
                 val modelName = WhisperModel.ALL.find { it.id == settings.selectedWhisperModel }?.name
                     ?: "Base Multilingual"
 
@@ -77,8 +79,7 @@ class HomeViewModel @Inject constructor(
                 hasAudioPermission = audio,
                 hasOverlayPermission = overlay,
                 hasAccessibilityPermission = a11y,
-                hasNotificationPermission = notif,
-                isReadyToDictate = audio && overlay && a11y && state.isAppEnabled
+                hasNotificationPermission = notif
             )
         }
     }
