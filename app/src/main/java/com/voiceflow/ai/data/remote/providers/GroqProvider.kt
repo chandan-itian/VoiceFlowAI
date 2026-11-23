@@ -1,6 +1,7 @@
 package com.voiceflow.ai.data.remote.providers
 
 import com.voiceflow.ai.domain.model.AiProvider
+import com.voiceflow.ai.domain.model.LanguageMode
 import com.voiceflow.ai.domain.model.AppSettings
 import com.voiceflow.ai.domain.model.TranscriptionResult
 import javax.inject.Inject
@@ -25,10 +26,11 @@ class GroqProvider @Inject constructor(
 
     suspend fun transcribeAudio(
         audioPath: String,
-        provider: AiProvider
+        provider: AiProvider,
+        language: LanguageMode
     ): TranscriptionResult {
         val groqProvider = normalizeProvider(provider)
-        val result = openAIProvider.transcribeAudio(audioPath, groqProvider)
+        val result = openAIProvider.transcribeAudio(audioPath, groqProvider, language)
         return result.copy(provider = provider.name.ifBlank { "Groq (Whisper)" })
     }
 

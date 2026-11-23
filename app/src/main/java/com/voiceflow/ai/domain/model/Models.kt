@@ -122,7 +122,7 @@ data class FieldInfo(
 @Serializable
 data class AppSettings(
     val aiMode: AiMode = AiMode.OFFLINE,
-    val languageMode: LanguageMode = LanguageMode.AUTO,
+    val languageMode: LanguageMode = LanguageMode.HINGLISH,
     val selectedWhisperModel: String = "base",
     val defaultProviderId: String = "",
     val enablePunctuation: Boolean = true,

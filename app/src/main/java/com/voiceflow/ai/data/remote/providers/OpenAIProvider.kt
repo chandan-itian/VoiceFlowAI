@@ -34,7 +34,8 @@ class OpenAIProvider @Inject constructor(
 
     suspend fun transcribeAudio(
         audioPath: String,
-        provider: AiProvider
+        provider: AiProvider,
+        language: LanguageMode? = null
     ): TranscriptionResult = withContext(Dispatchers.IO) {
         val audioFile = File(audioPath)
         require(audioFile.exists()) { "Audio file not found: $audioPath" }
@@ -44,7 +45,7 @@ class OpenAIProvider @Inject constructor(
         val model = provider.modelId.ifBlank { DEFAULT_TRANSCRIPTION_MODEL }
 
         if (provider.type != ProviderType.GROQ && provider.type != ProviderType.OPENAI) {
-            return@withContext upload(audioFile, "audio/wav", provider, baseUrl, model)
+            return@withContext upload(audioFile, "audio/wav", provider, baseUrl, model, language)
         }
         val compressed = File.createTempFile("dictation-", ".m4a", audioFile.parentFile)
         try {
@@ -55,20 +56,28 @@ class OpenAIProvider @Inject constructor(
                 Log.w(TAG, "AAC encoder unavailable, using PCM", e)
                 false
             }
-            if (encoded) upload(compressed, "audio/mp4", provider, baseUrl, model)
-            else upload(audioFile, "audio/wav", provider, baseUrl, model)
+            if (encoded) upload(compressed, "audio/mp4", provider, baseUrl, model, language)
+            else upload(audioFile, "audio/wav", provider, baseUrl, model, language)
         } finally {
             compressed.delete()
         }
     }
 
-    private fun upload(audioFile: File, mime: String, provider: AiProvider, baseUrl: String, model: String): TranscriptionResult {
+    private fun upload(audioFile: File, mime: String, provider: AiProvider, baseUrl: String, model: String, language: LanguageMode?): TranscriptionResult {
         val fileBody = audioFile.asRequestBody(mime.toMediaType())
         val multipartBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("file", audioFile.name, fileBody)
             .addFormDataPart("model", model)
-            .addFormDataPart("response_format", "json")
+            .addFormDataPart("response_format", if (language == LanguageMode.AUTO) "verbose_json" else "json")
+            .apply {
+                when (language) {
+                    LanguageMode.HINDI -> addFormDataPart("language", "hi")
+                    LanguageMode.ENGLISH -> addFormDataPart("language", "en")
+                    LanguageMode.HINGLISH -> addFormDataPart("prompt", "Main Hindi aur English mix karke bolta hoon. Kal meeting hai, please mujhe update kar dena.")
+                    else -> Unit
+                }
+            }
             .build()
 
         val request = Request.Builder()
@@ -93,6 +102,7 @@ class OpenAIProvider @Inject constructor(
         return TranscriptionResult(
             text = parsed.text.trim(),
             rawText = parsed.text.trim(),
+            language = parsed.language,
             durationMs = duration,
             provider = provider.name.ifBlank { "OpenAI" },
             isOffline = false
@@ -117,7 +127,7 @@ class OpenAIProvider @Inject constructor(
         val langInstruction = when (languageMode) {
             LanguageMode.HINDI -> "Write the output in proper Devanagari Hindi."
             LanguageMode.ENGLISH -> "Write the output in natural English."
-            LanguageMode.HINGLISH -> "Keep Hinglish as Romanized Hindi with English terms, exactly as naturally spoken in India."
+            LanguageMode.HINGLISH -> "The speaker dictates in Hinglish, mixing Hindi and English. Write Hindi words in Latin letters, including words transcribed in Urdu or Devanagari script. Preserve English words and all-English sentences. Transcribe faithfully without translating or answering."
             LanguageMode.ENGLISH_TRANSLATION -> "Translate into clear English."
             LanguageMode.AUTO -> "Preserve the original language mixture accurately."
         }

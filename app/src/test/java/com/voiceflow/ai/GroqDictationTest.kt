@@ -23,7 +23,27 @@ class GroqDictationTest {
         coEvery { preferences.getSettings() } returns settings
         coEvery { audio.stopRecording() } returns RecordedAudio("recording.wav", true)
         coEvery { providers.getDefaultProvider() } returns provider
-        coEvery { providers.transcribeOnline("recording.wav", provider) } returns TranscriptionResult(raw)
+        coEvery { providers.transcribeOnline("recording.wav", provider, settings.languageMode) } returns TranscriptionResult(raw)
+    }
+
+    @Test
+    fun recoversHinglishWhenBothStagesProduceUrduScript() = runTest {
+        val urdu = "میں بول رہا تھا کہ تم اردو میں کیوں لکھ رہے ہو"
+        val hindi = "मैं बोल रहा था कि तुम उर्दू में क्यों लिख रहे हो"
+        val roman = "Main bol raha tha ki tum Urdu mein kyun likh rahe ho?"
+        coEvery { providers.transcribeOnline("recording.wav", provider, settings.languageMode) } returns TranscriptionResult(urdu)
+        coEvery { providers.refineText(urdu, provider, settings) } returns urdu
+        coEvery { providers.transcribeOnline("recording.wav", provider, LanguageMode.HINDI) } returns TranscriptionResult(hindi)
+        coEvery { providers.refineText(hindi, provider, settings) } returns roman
+        assertEquals(roman, stop().getOrThrow().text)
+    }
+
+    @Test
+    fun preservesEnglishWhenFormatterChangesScript() = runTest {
+        val english = "Please send the meeting link."
+        coEvery { providers.transcribeOnline("recording.wav", provider, settings.languageMode) } returns TranscriptionResult(english)
+        coEvery { providers.refineText(english, provider, settings) } returns "میٹنگ"
+        assertEquals(english, stop().getOrThrow().text)
     }
 
     @Test
@@ -42,7 +62,7 @@ class GroqDictationTest {
         assertEquals(formatted, result.text)
         assertEquals(raw, result.rawText)
         coVerifyOrder {
-            providers.transcribeOnline("recording.wav", provider)
+            providers.transcribeOnline("recording.wav", provider, settings.languageMode)
             providers.refineText(raw, provider, settings)
         }
     }

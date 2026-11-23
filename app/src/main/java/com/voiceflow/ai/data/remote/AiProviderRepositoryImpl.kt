@@ -8,6 +8,7 @@ import com.voiceflow.ai.data.remote.providers.GroqProvider
 import com.voiceflow.ai.data.remote.providers.OpenAIProvider
 import com.voiceflow.ai.data.remote.providers.OpenRouterProvider
 import com.voiceflow.ai.domain.model.AiProvider
+import com.voiceflow.ai.domain.model.LanguageMode
 import com.voiceflow.ai.domain.model.AppSettings
 import com.voiceflow.ai.domain.model.ProviderType
 import com.voiceflow.ai.domain.model.TranscriptionResult
@@ -234,11 +235,11 @@ class AiProviderRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun transcribeOnline(audioPath: String, provider: AiProvider): TranscriptionResult {
+    override suspend fun transcribeOnline(audioPath: String, provider: AiProvider, language: LanguageMode): TranscriptionResult {
         val p = attachApiKey(provider)
         return when (p.type) {
             ProviderType.GEMINI -> geminiProvider.transcribeAudio(audioPath, p)
-            ProviderType.GROQ -> groqProvider.transcribeAudio(audioPath, p)
+            ProviderType.GROQ -> groqProvider.transcribeAudio(audioPath, p, language)
             ProviderType.OPENAI, ProviderType.CUSTOM_OPENAI -> openAIProvider.transcribeAudio(audioPath, p)
             ProviderType.OPENROUTER -> {
                 throw UnsupportedOperationException("OpenRouter does not support direct audio transcription")

@@ -41,7 +41,7 @@ interface AiProviderRepository {
     suspend fun setDefaultProvider(id: String)
     suspend fun testConnection(provider: AiProvider): Result<String>
     suspend fun fetchModels(provider: AiProvider): Result<List<String>>
-    suspend fun transcribeOnline(audioPath: String, provider: AiProvider): TranscriptionResult
+    suspend fun transcribeOnline(audioPath: String, provider: AiProvider, language: LanguageMode): TranscriptionResult
     suspend fun refineText(text: String, provider: AiProvider, settings: AppSettings): String
 }
 

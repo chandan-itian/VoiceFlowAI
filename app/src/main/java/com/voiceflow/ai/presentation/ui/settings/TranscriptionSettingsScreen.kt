@@ -41,7 +41,7 @@ fun TranscriptionSettingsScreen(
 
             LanguageSelectionCard(
                 title = "Hinglish (Recommended)",
-                subtitle = "Romanized Hindi mixed with English terms (e.g., 'Bhai dashboard update kar do')",
+                subtitle = "Hindi in Latin letters with English words preserved (e.g., 'Bhai dashboard update kar do')",
                 selected = settings.languageMode == LanguageMode.HINGLISH,
                 onSelect = { viewModel.setLanguageMode(LanguageMode.HINGLISH) }
             )
@@ -62,7 +62,7 @@ fun TranscriptionSettingsScreen(
 
             LanguageSelectionCard(
                 title = "Auto-Detect",
-                subtitle = "Automatically detect the spoken language",
+                subtitle = "Detect the spoken language. Groq writes detected Hindi or Urdu in Roman Hinglish.",
                 selected = settings.languageMode == LanguageMode.AUTO,
                 onSelect = { viewModel.setLanguageMode(LanguageMode.AUTO) }
             )

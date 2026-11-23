@@ -68,6 +68,7 @@ data class GeminiModelInfo(
 
 @Serializable
 data class OpenAiTranscriptionResponse(
+    val language: String = "",
     val text: String = ""
 )
 

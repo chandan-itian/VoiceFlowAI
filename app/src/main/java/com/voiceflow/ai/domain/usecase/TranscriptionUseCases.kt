@@ -52,7 +52,7 @@ class StopRecordingAndTranscribeUseCase @Inject constructor(
                     val provider = providerRepository.getDefaultProvider()
                         ?: return Result.failure(Exception("No default online AI provider configured. Please configure an API key in Provider Manager."))
                     val rawResult = try {
-                        providerRepository.transcribeOnline(audioPath, provider)
+                        providerRepository.transcribeOnline(audioPath, provider, settings.languageMode)
                     } catch (e: UnsupportedOperationException) {
                         // For text-only LLM providers like OpenRouter, transcribe with Whisper first, then refine with the LLM
                         val localResult = whisperRepository.transcribe(audioPath, defaultLangHint, defaultPromptHint)
@@ -61,9 +61,26 @@ class StopRecordingAndTranscribeUseCase @Inject constructor(
                             isOffline = false
                         )
                     }
+                    val outputSettings = if (provider.type == ProviderType.GROQ && settings.languageMode == LanguageMode.AUTO &&
+                        rawResult.language.lowercase() in setOf("hi", "hindi", "ur", "urdu")) {
+                        settings.copy(languageMode = LanguageMode.HINGLISH)
+                    } else settings
                     val needsFormatter = provider.type == ProviderType.GROQ || provider.type == ProviderType.OPENROUTER
-                    val text = if (needsFormatter) refineOrKeep(rawResult.text, provider, settings) else rawResult.text
-                    rawResult.copy(text = processTextUseCase(text))
+                    val text = if (needsFormatter) refineOrKeep(rawResult.text, provider, outputSettings) else rawResult.text
+                    val output = if (provider.type == ProviderType.GROQ && needsScriptRepair(text, outputSettings.languageMode)) {
+                        if (!needsScriptRepair(rawResult.text, outputSettings.languageMode)) rawResult.text
+                        else {
+                            // Re-decode the audio once with a Hindi hint if both stages returned the wrong script.
+                            val retry = providerRepository.transcribeOnline(audioPath, provider, LanguageMode.HINDI)
+                            refineOrKeep(retry.text, provider, outputSettings).let { refined ->
+                                if (needsScriptRepair(refined, outputSettings.languageMode)) retry.text else refined
+                            }
+                        }
+                    } else text
+                    check(provider.type != ProviderType.GROQ || !needsScriptRepair(output, outputSettings.languageMode)) {
+                        "Could not produce the selected writing script. Please dictate again."
+                    }
+                    rawResult.copy(text = processTextUseCase(output, outputSettings))
                 }
                 AiMode.SMART_HYBRID -> {
                     // Step 1: Transcribe locally using fast Whisper with vocabulary biasing prompt
@@ -76,7 +93,13 @@ class StopRecordingAndTranscribeUseCase @Inject constructor(
                     } else {
                         offlineResult.text
                     }
-                    val processed = processTextUseCase(textToUse)
+                    val output = if (provider?.type == ProviderType.GROQ && needsScriptRepair(textToUse, settings.languageMode)) {
+                        check(!needsScriptRepair(offlineResult.text, settings.languageMode)) {
+                            "Could not produce the selected writing script. Please dictate again."
+                        }
+                        offlineResult.text
+                    } else textToUse
+                    val processed = processTextUseCase(output, settings)
                     offlineResult.copy(text = processed)
                 }
             }
@@ -88,6 +111,18 @@ class StopRecordingAndTranscribeUseCase @Inject constructor(
         } finally {
             java.io.File(audioPath).delete()
         }
+    }
+
+    private fun needsScriptRepair(text: String, mode: LanguageMode): Boolean = when (mode) {
+        // The local Hinglish normalizer can also recover Devanagari from Whisper.
+        LanguageMode.HINGLISH -> text.codePoints().anyMatch { cp ->
+            val script = Character.UnicodeScript.of(cp)
+            Character.isLetter(cp) && script != Character.UnicodeScript.LATIN && script != Character.UnicodeScript.DEVANAGARI
+        }
+        LanguageMode.HINDI -> text.codePoints().anyMatch { cp ->
+            Character.isLetter(cp) && Character.UnicodeScript.of(cp) == Character.UnicodeScript.ARABIC
+        }
+        else -> false
     }
 
     private suspend fun refineOrKeep(text: String, provider: AiProvider, settings: AppSettings): String {
@@ -122,8 +157,9 @@ class InsertTranscriptionUseCase @Inject constructor(
 class ProcessTextUseCase @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) {
-    suspend operator fun invoke(rawText: String): String {
-        val settings = settingsRepository.getSettings()
+    suspend operator fun invoke(rawText: String): String = invoke(rawText, settingsRepository.getSettings())
+
+    operator fun invoke(rawText: String, settings: AppSettings): String {
         return HinglishNormalizer.normalize(
             rawText = rawText,
             isHinglishMode = settings.languageMode == LanguageMode.HINGLISH,
