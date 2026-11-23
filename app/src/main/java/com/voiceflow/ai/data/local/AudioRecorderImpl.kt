@@ -2,6 +2,8 @@
 
 package com.voiceflow.ai.data.local
 
+import com.voiceflow.ai.data.local.whisper.WhisperJni
+import com.voiceflow.ai.domain.model.RecordedAudio
 import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -26,7 +28,8 @@ import kotlin.math.sqrt
 
 @Singleton
 class AudioRecorderImpl @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val whisper: WhisperJni
 ) : AudioRepository {
 
     companion object {
@@ -53,7 +56,7 @@ class AudioRecorderImpl @Inject constructor(
     override val amplitudeFlow: Flow<Float> = _amplitudeFlow.asSharedFlow()
 
     private val recordingsDir: File
-        get() = File(context.filesDir, RECORDINGS_DIR).also { it.mkdirs() }
+        get() = File(context.cacheDir, RECORDINGS_DIR).also { it.mkdirs() }
 
     override suspend fun startRecording(): Boolean = withContext(Dispatchers.IO) {
         try {
@@ -98,6 +101,7 @@ class AudioRecorderImpl @Inject constructor(
             // Responsive read chunk of 1024 shorts (~64ms) for smooth dancing waveform
             val thread = Thread({
                 val chunk = ShortArray(1024)
+                val byteBuffer = ByteBuffer.allocate(chunk.size * 2).order(ByteOrder.LITTLE_ENDIAN)
                 val fos = FileOutputStream(outFile)
 
                 try {
@@ -108,12 +112,11 @@ class AudioRecorderImpl @Inject constructor(
                     while (recording) {
                         val read = recorder.read(chunk, 0, chunk.size)
                         if (read > 0) {
-                            val byteBuffer = ByteBuffer.allocate(read * 2)
-                                .order(ByteOrder.LITTLE_ENDIAN)
+                            byteBuffer.clear()
                             for (i in 0 until read) {
                                 byteBuffer.putShort(chunk[i])
                             }
-                            fos.write(byteBuffer.array())
+                            fos.write(byteBuffer.array(), 0, read * 2)
                             totalSamplesWritten += read
 
                             // Responsive RMS calculation reacting strictly to voice amplitude
@@ -146,7 +149,7 @@ class AudioRecorderImpl @Inject constructor(
         }
     }
 
-    override suspend fun stopRecording(): String? = withContext(Dispatchers.IO) {
+    override suspend fun stopRecording(): RecordedAudio? = withContext(Dispatchers.IO) {
         try {
             if (!recording) return@withContext null
             recording = false
@@ -158,7 +161,7 @@ class AudioRecorderImpl @Inject constructor(
             }
 
             // Wait for writer thread to finish writing and patch WAV header
-            recordingThread?.join(1500)
+            recordingThread?.join()
             recordingThread = null
 
             try {
@@ -168,16 +171,64 @@ class AudioRecorderImpl @Inject constructor(
             }
             audioRecord = null
 
-            val path = currentFile?.absolutePath
+            val file = currentFile ?: return@withContext null
             currentFile = null
             _amplitudeFlow.tryEmit(0f)
-            Log.d(TAG, "Recording stopped and finalized → $path")
-            path
+            RecordedAudio(file.absolutePath, filterSpeech(file))
         } catch (e: Exception) {
             Log.e(TAG, "stopRecording error", e)
             releaseResources()
             null
         }
+    }
+
+    // On inference or I/O failure keep the complete dictation.
+    private fun filterSpeech(file: File): Boolean {
+        val modelName = "ggml-silero-v5.1.2.bin"
+        val model = File(context.cacheDir, modelName)
+        var filtered: File? = null
+        try {
+            if (!model.exists()) {
+                val temp = File.createTempFile("vad-model", ".bin", context.cacheDir)
+                try {
+                    context.assets.open(modelName).use { input -> temp.outputStream().use { input.copyTo(it) } }
+                    check(temp.renameTo(model))
+                } finally {
+                    temp.delete()
+                }
+            }
+            val ranges = whisper.speechRanges(model.absolutePath, file.absolutePath) ?: return true
+            if (ranges.isEmpty()) return false
+            if (ranges.size == 2 && ranges[0] == 0L && ranges[1] * 2 + 44 == file.length()) return true
+
+            val output = File.createTempFile("speech", ".wav", file.parentFile)
+            filtered = output
+            var written = 0L
+            RandomAccessFile(file, "r").use { input ->
+                output.outputStream().buffered().use { out ->
+                    out.write(ByteArray(44))
+                    val buffer = ByteArray(8192)
+                    for (i in ranges.indices step 2) {
+                        input.seek(44 + ranges[i] * 2)
+                        var bytes = (ranges[i + 1] - ranges[i]) * 2
+                        written += bytes / 2
+                        while (bytes > 0) {
+                            val size = minOf(bytes, buffer.size.toLong()).toInt()
+                            input.readFully(buffer, 0, size)
+                            out.write(buffer, 0, size)
+                            bytes -= size
+                        }
+                    }
+                }
+            }
+            patchWavHeader(output, written)
+            check(output.renameTo(file))
+        } catch (e: Exception) {
+            Log.w(TAG, "Speech filtering unavailable", e)
+        } finally {
+            filtered?.delete()
+        }
+        return true
     }
 
     override fun isRecording(): Boolean = recording

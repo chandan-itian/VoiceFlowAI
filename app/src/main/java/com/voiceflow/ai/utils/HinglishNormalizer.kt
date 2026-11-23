@@ -2,6 +2,24 @@ package com.voiceflow.ai.utils
 
 object HinglishNormalizer {
 
+    // Recover common English loanwords even when the cloud formatter is unavailable.
+    private val englishSpellings = mapOf(
+        "नॉलेज" to "knowledge", "नॉलेज़" to "knowledge", "नालेज" to "knowledge",
+        "नॉलेड्ज" to "knowledge", "nolej" to "knowledge", "nawlej" to "knowledge",
+        "naalej" to "knowledge", "naulej" to "knowledge", "nolege" to "knowledge", "knolej" to "knowledge",
+        "मॉडल" to "model", "मॉडेल" to "model", "मॉडल्स" to "models",
+        "mdal" to "model", "mdals" to "models",
+        "यूज" to "use", "यूज़" to "use", "यूज़" to "use", "yooj" to "use", "yooz" to "use",
+        "बेस्ट" to "best",
+        "मीटिंग" to "meeting", "प्रोजेक्ट" to "project", "अपडेट" to "update",
+        "फीडबैक" to "feedback", "डेडलाइन" to "deadline", "ईमेल" to "email",
+        "सॉफ्टवेयर" to "software", "डैशबोर्ड" to "dashboard"
+    )
+    private val englishWord = Regex(
+        "(?<![\\p{L}\\p{M}\\p{N}_])(?:" + englishSpellings.keys.joinToString("|") { Regex.escape(it) } +
+            ")(?![\\p{L}\\p{M}\\p{N}_])", RegexOption.IGNORE_CASE
+    )
+
     // Technical terms that should always maintain proper casing
     private val TECHNICAL_TERMS = mapOf(
         "api" to "API",
@@ -50,7 +68,10 @@ object HinglishNormalizer {
 
     // Standardized Hinglish spelling dictionary for common colloquial variations
     private val HINGLISH_STANDARDIZATIONS = mapOf(
-        "karo" to "kar do",
+        "bataen" to "batayein", "donon" to "dono", "bhee" to "bhi", "kyon" to "kyun", "karoo" to "karun",
+        "बताएं" to "batayein", "करूँ" to "karun", "करूं" to "karun",
+        "दोनों" to "dono", "में" to "mein", "मैं" to "main", "भी" to "bhi",
+        "क्यों" to "kyun", "हैं" to "hain",
         "kardo" to "kar do",
         "karlo" to "kar lo",
         "karlena" to "kar lena",
@@ -69,6 +90,13 @@ object HinglishNormalizer {
         "wfh" to "WFH"
     )
 
+    // "men" is also a valid English word. Repair it only in a Hindi construction.
+    private val comparison = Regex("""(?iu)\b(dono|donon) (model|models) (men|mein|me) se\b""")
+    private val hindiPostposition = Regex("""(?iu)\bmen(?= se\b)""")
+
+    private val repeatedSubject = Regex("""(?iu)\bdono (aakhir|akhir) dono\b""")
+    private val pluralAssessment = Regex("""(?iu)\b(dono (?:kyun |kyon )?best) hai\b""")
+
     // Hindi and English filler words
     private val FILLER_PATTERNS = listOf(
         "\\bumm+\\b",
@@ -80,7 +108,11 @@ object HinglishNormalizer {
         "\\barre\\b(?=\\s*,)",
         "\\byou know\\b(?=\\s*,)",
         "\\blike\\b(?=\\s*,)"
-    )
+    ).map { Regex(it, RegexOption.IGNORE_CASE) }
+
+    private val slangPatterns = HINGLISH_STANDARDIZATIONS.map { (slang, standard) ->
+        Regex("(?<![\\p{L}\\p{M}\\p{N}_])${Regex.escape(slang)}(?![\\p{L}\\p{M}\\p{N}_])", RegexOption.IGNORE_CASE) to standard
+    }
 
     // Devanagari character to Roman transliteration map for Hinglish fallback
     private val DEVANAGARI_MAP = mapOf(
@@ -94,6 +126,7 @@ object HinglishNormalizer {
         'अ' to "a", 'आ' to "aa", 'इ' to "i", 'ई' to "ee", 'उ' to "u", 'ऊ' to "oo",
         'ऋ' to "ri", 'ए' to "e", 'ऐ' to "ai", 'ओ' to "o", 'औ' to "au",
         'ा' to "a", 'ि' to "i", 'ी' to "ee", 'ु' to "u", 'ू' to "oo",
+        'ॉ' to "o", 'ॅ' to "e", 'ँ' to "n",
         'ृ' to "ri", 'े' to "e", 'ै' to "ai", 'ो' to "o", 'ौ' to "au",
         'ं' to "n", 'ः' to "h", '्' to ""
     )
@@ -149,16 +182,22 @@ object HinglishNormalizer {
 
         // If user explicitly selected Hinglish mode and Whisper produced Devanagari script,
         // convert to clean Romanized Hinglish.
-        if (isHinglishMode && containsDevanagari(text)) {
-            text = devanagariToHinglish(text)
+        if (isHinglishMode) {
+            for ((pattern, standard) in slangPatterns) text = text.replace(pattern, standard)
+            text = englishWord.replace(text) { englishSpellings.getValue(it.value.lowercase()) }
+            if (containsDevanagari(text)) text = devanagariToHinglish(text)
+            text = comparison.replace(text, "dono models mein se")
+            text = hindiPostposition.replace(text, "mein")
+            text = repeatedSubject.replace(text) { "${it.groupValues[1]} dono" }
+            text = pluralAssessment.replace(text) { "${it.groupValues[1]} hain" }
         }
 
         // Remove filler words
         if (removeFillers) {
             for (pattern in FILLER_PATTERNS) {
-                text = text.replace(Regex(pattern, RegexOption.IGNORE_CASE), "")
+                text = text.replace(pattern, "")
             }
-            text = text.replace(Regex("\\s{2,}"), " ")
+            text = text.replace(Regex("[ \\t]{2,}"), " ")
         }
 
         // Apply technical vocabulary and brand casing
@@ -172,11 +211,6 @@ object HinglishNormalizer {
             }
         }
         text = words.joinToString(" ")
-
-        // Common Hinglish compound words
-        for ((slang, standard) in HINGLISH_STANDARDIZATIONS) {
-            text = text.replace(Regex("\\b$slang\\b", RegexOption.IGNORE_CASE), standard)
-        }
 
         // Punctuation
         if (fixPunctuation) {

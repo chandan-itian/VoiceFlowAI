@@ -68,6 +68,7 @@ data class GeminiModelInfo(
 
 @Serializable
 data class OpenAiTranscriptionResponse(
+    val language: String = "",
     val text: String = ""
 )
 
@@ -93,7 +94,8 @@ data class OpenAiChatResponse(
 
 @Serializable
 data class OpenAiChoice(
-    val message: OpenAiMessage? = null
+    val message: OpenAiMessage? = null,
+    @SerialName("finish_reason") val finishReason: String? = null
 )
 
 @Serializable

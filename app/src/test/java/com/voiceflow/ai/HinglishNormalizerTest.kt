@@ -8,6 +8,26 @@ import org.junit.Test
 class HinglishNormalizerTest {
 
     @Test
+    fun repairsMixedModelComparisonWithoutChangingEnglishMen() {
+        val input = "To donon mdal men se kaun sa mdal ko main yooj karoo?"
+        assertEquals("To dono models mein se kaun sa model ko main use karun?", HinglishNormalizer.normalize(input, true))
+        assertEquals(
+            "Aur ye bhi batayein ki aakhir dono kyun best hain?",
+            HinglishNormalizer.normalize("aur ye bhee bataen ki donon aakhir donon kyon best hai?", true)
+        )
+        assertEquals("Two men use models.", HinglishNormalizer.normalize("Two men use models.", true))
+        assertEquals("Dono models mein se.", HinglishNormalizer.normalize("दोनों मॉडल में से", true))
+    }
+
+    @Test
+    fun restoresEnglishWordsInMixedDictation() {
+        assertEquals("Mujhe knowledge hai.", HinglishNormalizer.normalize("मुझे नॉलेज है", true))
+        assertEquals("Meri meeting ka feedback do.", HinglishNormalizer.normalize("meri मीटिंग ka फीडबैक do", true))
+        assertEquals("Mujhe knowledge hai.", HinglishNormalizer.normalize("mujhe nolej hai", true))
+        assertEquals("Her knowledge is invaluable.", HinglishNormalizer.normalize("Her knowledge is invaluable.", true))
+    }
+
+    @Test
     fun testHinglishSpokenSentenceNormalization() {
         val input = "bhai meri website ka dashboard update kar do aur booking system bhi check kar lena"
         val output = HinglishNormalizer.normalize(

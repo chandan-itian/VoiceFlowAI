@@ -1,6 +1,10 @@
 package com.voiceflow.ai.presentation.ui.home
 
-import android.content.Context
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.voiceflow.ai.domain.model.AiMode
+import com.voiceflow.ai.presentation.ui.components.SectionHeader
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -22,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import com.voiceflow.ai.R
 import com.voiceflow.ai.presentation.ui.components.SettingsClickableItem
 import com.voiceflow.ai.presentation.ui.components.VoiceFlowTopBar
-import com.voiceflow.ai.presentation.viewmodel.HomeUiState
 import com.voiceflow.ai.presentation.viewmodel.HomeViewModel
 import com.voiceflow.ai.utils.PermissionUtils
 
@@ -40,8 +42,9 @@ fun HomeScreen(
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(Unit) {
+    LifecycleResumeEffect(context) {
         viewModel.refreshPermissions(context)
+        onPauseOrDispose { }
     }
 
     Scaffold(
@@ -60,7 +63,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(28.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = if (state.isAppEnabled) {
                         MaterialTheme.colorScheme.primaryContainer
@@ -69,53 +72,49 @@ fun HomeScreen(
                     }
                 )
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .toggleable(state.isAppEnabled, role = Role.Switch) { viewModel.toggleAppEnabled() }
+                        .padding(24.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (state.isAppEnabled) Color(0xFF8B5CF6) else Color.Gray
-                            ),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_wispr_flow),
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(26.dp)
-                        )
+                        Box(
+                            modifier = Modifier.size(44.dp).clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_wispr_flow),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Switch(checked = state.isAppEnabled, onCheckedChange = null)
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (state.isAppEnabled) "VoiceFlow is Active" else "VoiceFlow is Paused",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = if (state.isReadyToDictate) {
-                                "Ready for floating dictation alongside Gboard"
-                            } else {
-                                "Tap below to complete permission setup"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = state.isAppEnabled,
-                        onCheckedChange = { viewModel.toggleAppEnabled() }
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = if (state.isAppEnabled) "Dictation enabled" else "Dictation paused",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = when {
+                            !state.isAppEnabled -> "Turn on to use the floating mic"
+                            !state.hasRequiredPermissions -> "Complete microphone setup below"
+                            else -> "Open a text field to dictate"
+                        },
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
 
             // Permissions Checklist if any permission is missing
-            if (!state.hasAudioPermission || !state.hasOverlayPermission || !state.hasAccessibilityPermission) {
+            if (!state.hasRequiredPermissions) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -158,48 +157,33 @@ fun HomeScreen(
                 }
             }
 
-            // Current Configuration Card
+            SectionHeader("Dictation engine")
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                )
+                onClick = onNavigateToAISettings,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Active Engine & Model",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Mode: ${state.currentAiMode.name}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = "Model: ${state.currentModelName}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = "Provider: ${state.defaultProviderName}",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            when (state.currentAiMode) {
+                                AiMode.OFFLINE -> "On device"
+                                AiMode.ONLINE -> "Online"
+                                AiMode.SMART_HYBRID -> "Smart hybrid"
+                            },
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text(state.defaultProviderName, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = null)
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Navigation Items
-            SettingsClickableItem(
-                title = "AI Engine & Mode",
-                subtitle = "Offline, Online API, or Smart Hybrid",
-                icon = Icons.Default.Psychology,
-                onClick = onNavigateToAISettings
-            )
-
+            SectionHeader("Models and providers")
             SettingsClickableItem(
                 title = "Offline Whisper Models",
                 subtitle = "Download Base (142MB), Tiny (75MB), or Small",
@@ -214,6 +198,7 @@ fun HomeScreen(
                 onClick = onNavigateToProviders
             )
 
+            SectionHeader("Dictation preferences")
             SettingsClickableItem(
                 title = "Transcription & Language",
                 subtitle = "Hindi, English, Hinglish, punctuation & fillers",

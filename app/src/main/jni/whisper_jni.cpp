@@ -2,6 +2,8 @@
 #include <android/log.h>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <memory>
 #include <fstream>
 #include <cstring>
 #include <cstdint>
@@ -116,6 +118,59 @@ static bool read_wav_file(const std::string &fname, std::vector<float> &pcmf32, 
 }
 
 extern "C" {
+
+// Input is the recorder's canonical 44-byte-header, 16 kHz mono PCM WAV.
+JNIEXPORT jlongArray JNICALL
+Java_com_voiceflow_ai_data_local_whisper_WhisperJni_speechRanges(
+        JNIEnv *env, jobject, jstring model_path, jstring wav_path) {
+    const char *path = env->GetStringUTFChars(wav_path, nullptr);
+    std::ifstream wav(path, std::ios::binary);
+    env->ReleaseStringUTFChars(wav_path, path);
+    if (!wav.seekg(44)) return nullptr;
+
+    auto params = whisper_vad_default_context_params();
+    params.use_gpu = false;
+    params.n_threads = 1;
+    const char *model = env->GetStringUTFChars(model_path, nullptr);
+    std::unique_ptr<whisper_vad_context, decltype(&whisper_vad_free)> ctx(
+        whisper_vad_init_from_file_with_params(model, params), whisper_vad_free);
+    env->ReleaseStringUTFChars(model_path, model);
+    if (!ctx) return nullptr;
+    whisper_vad_reset_state(ctx.get());
+
+    constexpr int frame = 512;
+    constexpr int batch = 32 * frame;
+    constexpr int padding = 3200; // 200 ms either side protects quiet syllables.
+    std::vector<int16_t> pcm(batch);
+    std::vector<float> samples(batch);
+    std::vector<jlong> ranges;
+    jlong offset = 0;
+    while (wav) {
+        wav.read(reinterpret_cast<char *>(pcm.data()), batch * sizeof(int16_t));
+        const int count = static_cast<int>(wav.gcount() / sizeof(int16_t));
+        if (!count) break;
+        for (int i = 0; i < count; ++i) samples[i] = pcm[i] / 32768.0f;
+        if (!whisper_vad_detect_speech_no_reset(ctx.get(), samples.data(), count)) return nullptr;
+        const auto probs = whisper_vad_probs(ctx.get());
+        for (int i = 0; i < whisper_vad_n_probs(ctx.get()); ++i) {
+            if (probs[i] < 0.45f) continue;
+            const jlong start = std::max<jlong>(0, offset + i * frame - padding);
+            const jlong end = offset + (i + 1) * frame + padding;
+            if (ranges.empty() || ranges.back() < start) {
+                ranges.push_back(start);
+                ranges.push_back(end);
+            } else {
+                ranges.back() = end;
+            }
+        }
+        offset += count;
+    }
+    if (wav.bad()) return nullptr;
+    if (!ranges.empty()) ranges.back() = std::min(ranges.back(), offset);
+    auto result = env->NewLongArray(static_cast<jsize>(ranges.size()));
+    if (result && !ranges.empty()) env->SetLongArrayRegion(result, 0, ranges.size(), ranges.data());
+    return result;
+}
 
 JNIEXPORT jlong JNICALL
 Java_com_voiceflow_ai_data_local_whisper_WhisperJni_initContext(

@@ -600,8 +600,8 @@ fun FloatingMicUI(
                         .size(56.dp)
                         .shadow(elevation = 6.dp, shape = CircleShape)
                         .clip(CircleShape)
-                        .background(Color(0xFFFCE7F3)) // Soft pink pastel matching reference
-                        .border(BorderStroke(1.2.dp, Color(0xFFFBCFE8)), CircleShape)
+                        .background(Color.White.copy(alpha = 0.86f))
+                        .border(BorderStroke(1.2.dp, Color.Black.copy(alpha = 0.12f)), CircleShape)
                         .pointerInput(dockSide) {
                             awaitEachGesture {
                                 val down = awaitFirstDown()
@@ -637,8 +637,8 @@ fun FloatingMicUI(
                     Icon(
                         painter = painterResource(id = R.drawable.ic_wispr_flow),
                         contentDescription = "VoiceFlow AI Dictate",
-                        tint = Color(0xFF1E1B4B), // Deep indigo/charcoal
-                        modifier = Modifier.size(26.dp)
+                        tint = Color(0xFF191919),
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
@@ -654,7 +654,6 @@ fun FloatingMicUI(
                 ) {
                     Row(
                         modifier = Modifier
-                            .background(Color(0xCCFFFFFF))
                             .padding(horizontal = 8.dp)
                             .height(54.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -852,8 +851,8 @@ fun DockedTabUI(
             .height(54.dp)
             .shadow(elevation = 6.dp, shape = shape)
             .clip(shape)
-            .background(Color(0xFFFCE7F3)) // Soft blush pastel matching Wispr Flow
-            .border(BorderStroke(1.2.dp, Color(0xFFFBCFE8)), shape)
+            .background(Color.White.copy(alpha = 0.86f))
+            .border(BorderStroke(1.2.dp, Color.Black.copy(alpha = 0.12f)), shape)
             .pointerInput(dockSide) {
                 awaitEachGesture {
                     val down = awaitFirstDown()
@@ -884,33 +883,12 @@ fun DockedTabUI(
             },
         contentAlignment = Alignment.Center
     ) {
-        // Vertical indicator bars indicating voice tab
-        Column(
-            verticalArrangement = Arrangement.spacedBy(3.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(3.dp)
-                    .height(6.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF8B5CF6))
-            )
-            Box(
-                modifier = Modifier
-                    .width(3.5.dp)
-                    .height(14.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF1E1B4B))
-            )
-            Box(
-                modifier = Modifier
-                    .width(3.dp)
-                    .height(6.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF8B5CF6))
-            )
-        }
+        Icon(
+            painter = painterResource(R.drawable.ic_wispr_flow),
+            contentDescription = "Expand dictation microphone",
+            tint = Color(0xFF191919),
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
 

@@ -70,8 +70,8 @@ class SettingsDataStore @Inject constructor(
                 runCatching { AiMode.valueOf(it) }.getOrDefault(AiMode.OFFLINE)
             } ?: AiMode.OFFLINE,
             languageMode = this[Keys.LANGUAGE_MODE]?.let {
-                runCatching { LanguageMode.valueOf(it) }.getOrDefault(LanguageMode.AUTO)
-            } ?: LanguageMode.AUTO,
+                runCatching { LanguageMode.valueOf(it) }.getOrDefault(LanguageMode.HINGLISH)
+            } ?: LanguageMode.HINGLISH,
             selectedWhisperModel = this[Keys.SELECTED_WHISPER_MODEL] ?: "base",
             defaultProviderId = this[Keys.DEFAULT_PROVIDER_ID] ?: "",
             enablePunctuation = this[Keys.ENABLE_PUNCTUATION] ?: true,

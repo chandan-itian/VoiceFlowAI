@@ -47,7 +47,7 @@ fun AISettingsScreen(
 
             ModeSelectionCard(
                 title = "Online AI",
-                description = "Send audio directly to high-accuracy cloud models (Google Gemini, Groq Whisper, OpenAI). Requires internet and API key.",
+                description = "Use your configured cloud provider. With Groq, Whisper transcribes your audio and Llama formats the text in your selected language.",
                 selected = settings.aiMode == AiMode.ONLINE,
                 onSelect = { viewModel.setAiMode(AiMode.ONLINE) }
             )

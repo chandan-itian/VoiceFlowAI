@@ -25,7 +25,7 @@ interface WhisperRepository {
 
 interface AudioRepository {
     suspend fun startRecording(): Boolean
-    suspend fun stopRecording(): String?
+    suspend fun stopRecording(): RecordedAudio?
     fun isRecording(): Boolean
     fun cancelRecording()
     val amplitudeFlow: Flow<Float>
@@ -41,8 +41,8 @@ interface AiProviderRepository {
     suspend fun setDefaultProvider(id: String)
     suspend fun testConnection(provider: AiProvider): Result<String>
     suspend fun fetchModels(provider: AiProvider): Result<List<String>>
-    suspend fun transcribeOnline(audioPath: String, provider: AiProvider): TranscriptionResult
-    suspend fun refineText(text: String, provider: AiProvider, language: LanguageMode): String
+    suspend fun transcribeOnline(audioPath: String, provider: AiProvider, language: LanguageMode): TranscriptionResult
+    suspend fun refineText(text: String, provider: AiProvider, settings: AppSettings): String
 }
 
 interface TextInsertionRepository {
